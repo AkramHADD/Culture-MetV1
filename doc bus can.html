@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Documentation Technique - Banc d'essai Bus CAN/LIN</title>
+</head>
+
+<body>
+
+    <br><br><br><br>
+    <h1 align="center">Documentation Technique</h1>
+    <h2 align="center">Banc d'essai Bus CAN/LIN </h2>
+    <br><br>
+
+    <table align="center" border="1" cellpadding="15" cellspacing="0" width="50%">
+        <tr>
+            <td>
+                <p><strong>Réalisé par :</strong></p>
+                <ul>
+                    <li>ELGHAMRI Wiame</li>
+                    <li>ABOUZEID Ismael</li>
+                    <li>HADDOUCHE Akram</li>
+                </ul>
+                <p><strong>M2-SIAA-E3A</p>
+                <p><strong>2025/2026</p>
+            </td>
+        </tr>
+    </table>
+    <br><br><br><br><br><br>
+    <hr>
+
+    <h2>Sommaire</h2>
+    <ul>
+        <li><a href="#section1">1. Comprendre l'architecture globale</a></li>
+        <li><a href="#section2">2. Documentation des outils</a></li>
+        <li><a href="#section3">3. Documentation des calculateurs</a></li>
+        <li><a href="#section4">4. Rappel théorique CAN</a></li>
+        <li><a href="#section5">5. Interfaces CAN</a></li>
+        <li><a href="#section6">6. Séquence complète de diagnostic automatique</a></li>
+        <li><a href="#section7">7.Étude fonctionnelle de l'éclairage — Analyse des trames CAN</a></li>
+        <li><a href="#section8">8.Procédure d'exploitation du banc Leybold</a></li>
+    </ul>
+    <br><br>
+    <hr>
+
+    <h2 id="section1">1. Comprendre l'architecture globale</h2>
+    <h3>1.1 Description générale du banc</h3>
+    <p>
+        Le banc didactique "Systèmes interconnectés Automobile bus CAN - éclairage" a été développé en commun avec Audi.
+        Il reproduit fidèlement les systèmes d'une Audi A4 en utilisant exclusivement des composants automobiles
+        d'origine. L'équipement comprend notamment un tableau de bord moderne avec antidémarrage, l'électronique du
+        volant, un système d'éclairage complet et un moteur d'essuie-glace. L'objectif principal de cette plateforme est
+        la détection, l'analyse et le dépannage des défauts sur les réseaux multiplexés.
+    </p>
+
+    <h3>1.2 Topologie globale du réseau automobile</h3>
+
+    <p>
+        L'architecture multiplexée du véhicule repose sur une organisation hiérarchique et centralisée permettant de
+        relier les différents calculateurs via des protocoles adaptés à leurs besoins.
+    </p>
+    <ul>
+        <li><strong>Structure et Répartition :</strong> Le système s'articule autour d'une unité électrique centrale à
+            gestion électronique et d'un module central de confort.</li>
+        <li><strong>Diagnostic centralisé :</strong> L'ensemble du réseau est capable d'effectuer un autodiagnostic
+            centralisé. L'accès à ces données se fait via une prise de diagnostic standard OBD II.</li>
+    </ul>
+
+    <h3>1.3 Topologie du réseau habitacle </h3>
+    <p>
+        Le réseau de domaine habitacle (ou réseau de confort) utilise une structure mixte CAN et LIN pour optimiser les
+        coûts et les performances en fonction de la criticité des organes commandés. L'organisation est centralisée
+        autour du calculateur de confort.
+    </p>
+    <ul>
+        <li><strong>Bus CAN (High Speed / Fault Tolerant) :</strong> Il constitue la pillier du reseaux habitacle Il
+            relie les calculateurs principaux comme le module central du système de confort. Les portières (conducteur
+            et passager) sont également connectées au bus CAN (lignes CAN-H et CAN-L).</li>
+        <li><strong>Bus LIN (Low Speed) :</strong> Il est utilisé comme un sous-réseau maître/esclave pour des
+            composants moins critiques nécessitant un faible débit. Sur ce banc, l'électronique du volant (avec
+            télécommande) et le capteur optique de pluie communiquent via le bus LIN.</li>
+        <li><strong>Autres calculateurs clés :</strong> Le système intègre le combiné d'instruments et un calculateur
+            spécifique pour la détection automatique d'une remorque.</li>
+    </ul>
+
+    <h3>1.4 Architecture spécifique de réseau de banc d'essai</h3>
+    <p>
+        Bien qu'il reproduise un réseau automobile réel, le banc d'essai possède une architecture matérielle adaptée à
+        l'enseignement expérimental et à la mesure.
+    </p>
+    <ul>
+        <li><strong>Alimentation :</strong> Le banc est alimenté par une source de tension continue de 13,8 V avec une
+            consommation de courant pouvant atteindre 40 A.</li>
+        <li><strong>Simulateur de défauts :</strong> Un boîtier simulateur d'erreurs est intégré au circuit pour générer
+            volontairement des pannes physiques (rupture de bus, conflits, etc.).</li>
+        <li><strong>Points de mesure :</strong> Les signaux vitaux (CAN H/L, bornes d'alimentation 30 et 31) sont
+            extraits et rendus accessibles de manière sécurisée via des fiches et douilles de 4 mm.</li>
+        <li><strong>Interfaces PC :</strong> Le banc dispose d'interfaces matérielles dédiées pour analyser physiquement
+            les trames des bus CAN et LIN.</li>
+    </ul>
+
+    <h2 id="section2">2. Documentation des outils</h2>
+    <p>Cette section détaille les équipements de mesure et de diagnostic utilisés sur le banc d'essai pour interagir
+        avec les réseaux multiplexés.</p>
+
+    <h3>2.1 Adaptateur OBD CAN et Logiciel VCDS</h3>
+    <ul>
+        <li><strong>Fonction :</strong> L'adaptateur OBD-USB sert d'interface matérielle entre la prise de diagnostic du
+            véhicule (OBD II) et un ordinateur. Le logiciel de diagnostic associé (type VCDS ou Testeur de diagnostic
+            CASSY) permet d'interroger les calculateurs.</li>
+        <li><strong>Type de communication :</strong> Conversion des signaux du bus CAN (depuis la prise OBD) vers une
+            communication USB compréhensible par le PC.</li>
+        <li><strong>Données manipulées :</strong> Requêtes de diagnostic, codes de défauts (DTC), valeurs de mesure en
+            temps réel et identification des calculateurs.</li>
+        <li><strong>Utilisation dans le banc :</strong> Réaliser un scan réseau complet, lire ou effacer les défauts
+            générés par le simulateur et interagir avec l'unité centrale de confort.</li>
+    </ul>
+
+    <h3>2.2 Sensor-CASSY 2 (Réf: 524013S)</h3>
+    <ul>
+        <li><strong>Fonction :</strong> C'est une interface d'acquisition de données très performante agissant comme un
+            oscilloscope à mémoire numérique et un multimètre.</li>
+        <li><strong>Type de communication :</strong> Il se connecte en USB à l'ordinateur et reçoit des signaux
+            analogiques en entrée via des douilles de sécurité de 4 mm.</li>
+        <li><strong>Données manipulées :</strong> Acquisition de signaux électriques (tensions analogiques) avec une
+            résolution de 12 bits et un taux d'échantillonnage allant jusqu'à 1 MHz par entrée.</li>
+        <li><strong>Utilisation dans le banc :</strong> Capturer et visualiser les signaux électriques différentiels
+            bruts des lignes CAN-High et CAN-Low ou du bus LIN pour analyser l'intégrité des trames et les défauts
+            physiques.</li>
+    </ul>
+
+    <h3>2.3 CAN-Databus-Multi-Adapter (PCAN-Cable 3)</h3>
+    <ul>
+        <li><strong>Fonction :</strong> C'est un câble adaptateur permettant de récupérer physiquement les signaux du
+            bus CAN pour les diriger vers un instrument de mesure.</li>
+        <li><strong>Schéma de connexion :</strong> D'un côté, une prise D-Sub 9 broches (standard CiA® 106). De l'autre,
+            deux fiches bananes de 4 mm : la verte pour le CAN-High (Pin 7) et la jaune/orange pour le CAN-Low (Pin 2).
+            Il ne contient pas de résistance de terminaison.</li>
+        <li><strong>Type de communication :</strong> Liaison électrique physique directe sur le bus CAN FD/Standard.
+        </li>
+        <li><strong>Utilisation dans le banc :</strong> Connecter de manière sécurisée les points de mesure de 4 mm du
+            banc d'essai (CAN H/L) aux interfaces d'analyse ou au Sensor-CASSY 2.</li>
+    </ul>
+
+    <h3>2.4 LIN-Bus PC Interface USB (Réf: 7395881)</h3>
+    <ul>
+        <li><strong>Fonction :</strong> Connecter un ordinateur sous Windows à un réseau automobile LIN pour envoyer et
+            recevoir des messages.</li>
+        <li><strong>Type de communication :</strong> L'interface convertit le bus LIN (connecté via une prise D-Sub 9
+            broches) en USB.</li>
+        <li><strong>Données manipulées :</strong> Reconnaissance automatique du débit binaire (bit rate), de la longueur
+            de la trame et du type de somme de contrôle (checksum). Il supporte les fichiers de description LIN (LDF).
+        </li>
+        <li><strong>Utilisation dans le banc :</strong> L'interface peut être configurée comme Maître ou Esclave pour
+            analyser la communication du capteur optique de pluie ou de l'électronique du volant.</li>
+    </ul>
+
+    <h2 id="section3">3. Documentation des calculateurs</h2>
+    <p>
+        Le banc reproduit le réseau K-CAN (Komfort-CAN) d'une Audi A4 B7. Ce réseau tourne à 100 kbit/s. Les cinq
+        calculateurs présents sur le banc sont les suivants :
+    </p>
+
+    <h3>J519 &mdash; Unité électrique centrale</h3>
+    <p>
+        Le J519 est le calculateur principal du réseau K-CAN. Il gère tout l'éclairage extérieur du véhicule : feux de
+        position, feux de croisement, feux de route, clignotants, antibrouillard, feux de recul et éclairage de la
+        plaque d'immatriculation. Il pilote les relais correspondants et reçoit les commandes envoyées par J527 via le
+        bus CAN. Il est alimenté en permanence par la borne 30 et par la borne 15 lorsque le contact est mis.
+    </p>
+
+    <h3>J527 &mdash; Électronique du volant (commodos)</h3>
+    <p>
+        Le J527 lit l'état de tous les commodos de la colonne de direction : commodo gauche (clignotants, appels de
+        phares, feux de route, feux de position) et commodo droit (essuie-glace : OFF, intermittence, vitesse 1, vitesse
+        2, lave-glace). Il transmet ces informations sur le bus K-CAN à destination de J519 et J285. Il gère également
+        un bus LIN en interne pour les boutons du volant (régulateur de vitesse, etc.) et pour le capteur de pluie.
+    </p>
+
+    <h3>J471 &mdash; Calculateur de détection de remorque</h3>
+    <p>
+        Le J471 détecte automatiquement si une remorque est connectée à la prise 13 voies, en analysant la charge
+        électrique sur les circuits d'éclairage. Il informe J519 de la présence d'une remorque afin d'adapter le
+        comportement des clignotants et de gérer l'alimentation des feux de remorque (position, stop, clignotants,
+        recul, antibrouillard).
+    </p>
+
+    <h3>J285 &mdash; Combiné d'instruments</h3>
+    <p>
+        Le J285 est le tableau de bord. Il reçoit les informations du bus K-CAN et les affiche au conducteur : témoins
+        lumineux (clignotants actifs, feux de position, antibrouillard, défauts), données moteur, messages d'alerte. Il
+        détecte également les pertes de communication CAN et affiche un témoin de défaut si un calculateur ne répond
+        plus.
+    </p>
+
+    <h3>J393 &mdash; Module central du système de confort (ZKE)</h3>
+    <p>
+        Le J393 centralise les fonctions de confort de l'habitacle : verrouillage et déverrouillage centralisé des
+        portes, commande des lève-vitres conducteur et passager, réglage des rétroviseurs extérieurs, éclairage
+        intérieur. Il est alimenté en permanence par la borne 30 et sert de maître LIN pour les modules de portières.
+    </p>
+
+    <h3>Tableau récapitulatif</h3>
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ECU</th>
+                <th>Nom</th>
+                <th>Rôle principal</th>
+                <th>Bus</th>
+                <th>Vitesse</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>J519</td>
+                <td>BCM</td>
+                <td>Éclairage extérieur, commande relais</td>
+                <td>K-CAN</td>
+                <td>100 kbit/s</td>
+            </tr>
+            <tr>
+                <td>J527</td>
+                <td>LSM</td>
+                <td>Commodos colonne de direction</td>
+                <td>K-CAN + LIN</td>
+                <td>100 kbit/s</td>
+            </tr>
+            <tr>
+                <td>J471</td>
+                <td>AHK</td>
+                <td>Détection de remorque</td>
+                <td>K-CAN</td>
+                <td>100 kbit/s</td>
+            </tr>
+            <tr>
+                <td>J285</td>
+                <td>KI</td>
+                <td>Combiné d'instruments</td>
+                <td>K-CAN</td>
+                <td>100 kbit/s</td>
+            </tr>
+            <tr>
+                <td>J393</td>
+                <td>ZKE</td>
+                <td>Confort : portes, lève-vitres, rétroviseurs</td>
+                <td>K-CAN + LIN</td>
+                <td>100 kbit/s</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 id="section4">4. Rappel théorique CAN</h2>
+    <h3>CAN-H et CAN-L &mdash; Signal différentiel</h3>
+
+    <p>
+        Le bus CAN utilise deux fils : CAN-H (High) et CAN-L (Low). Le signal est différentiel, c'est-à-dire que
+        l'information est portée par la différence de tension entre les deux fils et non par la valeur absolue de l'un
+        d'eux. Cela rend le bus très résistant aux perturbations électromagnétiques.
+    </p>
+
+    <h3>Bit dominant / Bit récessif</h3>
+    <p>Il existe deux états logiques sur le bus CAN :</p>
+    <ul>
+        <li><strong>Bit récessif (1)</strong> : CAN-H &asymp; 2,5 V, CAN-L &asymp; 2,5 V, différentiel &asymp; 0 V.
+            C'est l'état de repos du bus.</li>
+        <li><strong>Bit dominant (0)</strong> : CAN-H &asymp; 3,5 V, CAN-L &asymp; 1,5 V, différentiel &asymp; 2 V.</li>
+    </ul>
+    <p>
+        La logique est dite filaire-ET : si un seul nœud envoie un bit dominant (0), le bus est dominant, peu importe ce
+        qu'envoient les autres nœuds. Un bit récessif n'est présent sur le bus que si aucun nœud n'envoie de dominant.
+    </p>
+
+    <h3>Arbitrage</h3>
+    <p>
+        Quand plusieurs nœuds tentent d'émettre en même temps, CAN utilise un arbitrage non destructif basé sur
+        l'identifiant du message. Chaque nœud compare bit par bit ce qu'il envoie avec ce qu'il lit sur le bus. Si un
+        nœud envoie un bit récessif (1) mais lit un dominant (0), il sait qu'un autre nœud plus prioritaire émet et il
+        s'arrête immédiatement. Le message avec l'identifiant de valeur numérique la plus basse gagne, car il comporte
+        plus de bits dominants en tête. Aucune donnée n'est perdue car le nœud gagnant n'a pas été interrompu.
+    </p>
+
+    <h3>Trame standard CAN 2.0A &mdash; identifiant 11 bits</h3>
+    <p>
+        C'est le format utilisé dans les réseaux automobile classiques comme le K-CAN du banc. Une trame se compose des
+        champs suivants :
+    </p>
+    <ul>
+        <li><strong>SOF</strong> (1 bit) : Start Of Frame, bit dominant qui marque le début de la trame et synchronise
+            les nœuds.</li>
+        <li><strong>ID</strong> (11 bits) : identifiant du message, détermine la priorité.</li>
+        <li><strong>RTR</strong> (1 bit) : type de trame &mdash; 0 = données, 1 = requête à distance.</li>
+        <li><strong>IDE</strong> (1 bit) : extension d'identifiant &mdash; 0 pour la trame standard.</li>
+        <li><strong>DLC</strong> (4 bits) : nombre d'octets de données (0 à 8).</li>
+        <li><strong>DATA</strong> (0 à 8 octets) : les données utiles.</li>
+        <li><strong>CRC</strong> (15 bits + délimiteur) : contrôle de redondance cyclique.</li>
+        <li><strong>ACK</strong> (2 bits) : les récepteurs mettent ce bit à dominant pour confirmer la réception.</li>
+        <li><strong>EOF</strong> (7 bits récessifs) : fin de trame.</li>
+    </ul>
+    <p>Représentation schématique :</p>
+    <pre>
++-----+--------+-----+-----+----+-----+----------+--------+-----+-------+
+| SOF |   ID   | RTR | IDE | r0 | DLC |   DATA   |  CRC   | ACK |  EOF  |
+| 1 b |  11 b  | 1 b | 1 b | 1b |  4b | 0 à 8 o  | 15+1 b | 2 b |  7 b  |
++-----+--------+-----+-----+----+-----+----------+--------+-----+-------+
+    </pre>
+
+    <h3>Trame étendue CAN 2.0B &mdash; identifiant 29 bits</h3>
+    <p>
+        La trame étendue ajoute 18 bits à l'identifiant (champ ID-B), pour un total de 29 bits. Elle est utilisée
+        notamment dans les protocoles J1939 (poids lourds) et pour certains diagnostics OBD. Le bit IDE vaut 1 pour
+        indiquer qu'il s'agit d'une trame étendue. Le nombre d'identifiants possibles passe ainsi à plus de 536
+        millions.
+    </p>
+    <pre>
++-----+------+-----+-----+-------+----+----+-----+----------+--------+-----+-------+
+| SOF |  IDA | SRR | IDE |  ID-B | r1 | r0 | DLC |   DATA   |  CRC   | ACK |  EOF  |
+| 1 b | 11 b | 1 b | 1 b |  18 b | 1b | 1b |  4b | 0 à 8 o  | 15+1 b | 2 b |  7 b  |
++-----+------+-----+-----+-------+----+----+-----+----------+--------+-----+-------+
+    </pre>
+
+    <h3>Détection d'erreurs</h3>
+    <p>CAN intègre 5 mécanismes de détection d'erreurs :</p>
+    <ul>
+        <li><strong>CRC Check</strong> : le récepteur recalcule le CRC et le compare à celui reçu. Détecte les erreurs
+            de transmission.</li>
+        <li><strong>Frame Check</strong> : vérification du format de la trame (délimiteurs, EOF). Détecte les erreurs de
+            structure.</li>
+        <li><strong>ACK Check</strong> : l'émetteur vérifie que le slot ACK est dominant, ce qui signifie qu'au moins un
+            nœud a bien reçu le message.</li>
+        <li><strong>Bit Monitoring</strong> : l'émetteur compare chaque bit envoyé avec ce qu'il lit sur le bus. Détecte
+            une erreur de bit.</li>
+        <li><strong>Stuff Check</strong> : après 5 bits identiques consécutifs, un bit inversé doit être présent. Une
+            violation de cette règle indique une erreur.</li>
+    </ul>
+    <p>
+        Chaque nœud maintient deux compteurs d'erreurs (TEC et REC). Si les erreurs s'accumulent, le nœud passe en
+        <strong>Error Passive</strong> (il continue d'émettre mais de façon moins agressive), puis en <strong>Bus
+            Off</strong> (il se déconnecte du bus).
+    </p>
+
+    <h2 id="section5">5. Interfaces CAN</h2>
+    <h3>Lighting System I &mdash; Feux de position et de croisement</h3>
+    <p><strong>Fonction :</strong> le Lighting System I gère les feux de position avant/arrière et les phares de
+        croisement. Le conducteur agit sur le commodo gauche, J527 lit l'état et l'envoie sur le K-CAN, J519 reçoit la
+        commande et active les relais correspondants. J285 affiche le témoin de feux allumés.</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Commodo gauche]
+       |
+       v
+[J527]  --(K-CAN : etat_feux)--> [J519]
+                                    |
+               +--------------------+--------------------+
+               |                                         |
+               v                                         v
+   [Relais feux de position]               [Relais feux de croisement]
+               |                                         |
+               v                                         v
+   [Feux av/ar position]                  [Phares de croisement]
+
+[J519] --(K-CAN : confirmation)--> [J285] --> Temoin feux
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Conducteur tourne le commodo &rarr; J527 envoie un message CAN avec l'état des feux demandé.</li>
+        <li>J519 reçoit le message &rarr; active le relais feux de position ou croisement.</li>
+        <li>J519 envoie en retour sur le bus l'état réel des sorties &rarr; J285 allume le témoin.</li>
+    </ul>
+    <p><strong>Mode défaut (ampoule grillée) :</strong></p>
+    <ul>
+        <li>J519 détecte l'absence de courant sur le circuit concerné.</li>
+        <li>J519 émet un code défaut (DTC) sur le bus CAN.</li>
+        <li>J285 affiche un témoin de défaut éclairage.</li>
+        <li><em>Correction :</em> remplacer l'ampoule, effacer le DTC via VCDS.</li>
+    </ul>
+
+    <h3>Lighting System II &mdash; Feux de route et antibrouillard</h3>
+    <p><strong>Fonction :</strong> gestion des feux de route (pleins phares, appels de phares) et des feux
+        antibrouillard. Une logique de sécurité dans J519 interdit l'activation de l'antibrouillard arrière si les feux
+        de croisement ne sont pas allumés (norme R19).</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Commodo gauche]
+(tirer = appel phares / pousser = pleins phares)
+       |
+       v
+[J527]  --(K-CAN : appel_phares / route)--> [J519]
+                                               |
+                          +--------------------+--------------------+
+                          |                                         |
+               Verification : croisement actifs ?        [Relais feux de route]
+               Oui --> autoriser ABR arriere                        |
+               Non --> refus (norme R19)                            v
+                          |                               [Phares de route]
+                          v
+               [Relais antibrouillard Av/Ar]
+                          |
+                          v
+               [Feux antibrouillard]
+
+[J519] --(K-CAN : confirmation)--> [J285] --> Temoin bleu (route) / orange (ABR)
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Conducteur actionne le commodo &rarr; J527 envoie la commande sur K-CAN.</li>
+        <li>J519 vérifie les conditions (croisement actifs ?) et active les relais feux de route / antibrouillard.</li>
+        <li>J285 affiche le témoin bleu (route) ou orange (antibrouillard).</li>
+    </ul>
+    <p><strong>Mode défaut (court-circuit sur sortie antibrouillard) :</strong></p>
+    <ul>
+        <li>J519 détecte un surcourant et coupe la sortie pour protéger le circuit (fail-safe).</li>
+        <li>J519 émet un DTC : court-circuit antibrouillard arrière.</li>
+        <li><em>Correction :</em> identifier et réparer le court-circuit, effacer le DTC. J519 réarme la sortie au
+            prochain démarrage.</li>
+    </ul>
+
+    <h3>Moteur essuie-glace</h3>
+    <p><strong>Fonction :</strong> le moteur d'essuie-glace est commandé par le commodo droit via J527 et K-CAN. J519
+        pilote les relais. Le capteur optique de pluie communique avec J527 via un bus LIN (mode automatique).</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Capteur pluie (LIN)] --+
+                        |
+[Commodo droit]  -------+--> [J527]  --(K-CAN : vitesse_EG = OFF/INT/V1/V2/LAVAGE)--> [J519]
+                                                                                         |
+                                                            +----------------------+
+                                                            |          |           |
+                                                            v          v           v
+                                                        [Relais V1]  [Relais V2]  [Relais pompe]
+                                                            |          |           |
+                                                            v          v           v
+                                                  [Moteur V1]  [Moteur V2]  [Pompe lave-glace]
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Conducteur agit sur le commodo droit &rarr; J527 envoie sur K-CAN la vitesse souhaitée (OFF, INT, V1, V2,
+            lave-glace).</li>
+        <li>J519 active le relais de vitesse correspondant.</li>
+        <li>En mode auto, le capteur de pluie (LIN) ajuste l'intermittence automatiquement.</li>
+    </ul>
+    <p><strong>Mode défaut (capteur pluie absent &mdash; rupture LIN) :</strong></p>
+    <ul>
+        <li>J527 ne reçoit plus de réponse du capteur sur le bus LIN.</li>
+        <li>J527 désactive le mode automatique et repasse en mode manuel uniquement.</li>
+        <li>Un DTC est émis sur le K-CAN : capteur pluie non communicant.</li>
+        <li><em>Correction :</em> vérifier le connecteur et le câblage LIN du capteur, effacer le DTC.</li>
+    </ul>
+
+    <h3>Interrupteur marche arrière</h3>
+    <p><strong>Fonction :</strong> l'interrupteur de marche arrière signale l'engagement de la marche arrière à J519,
+        qui active alors les feux de recul. Sur le banc, cet interrupteur est simulé par un switch.</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Interrupteur marche arriere]
+(ferme = MA engagee, 12V)
+             |
+             v
+      [J519]  --(K-CAN : marche_arriere = 1)--> [J285] --> Affichage "R"
+         |
+         v
+[Relais feux de recul]
+         |
+         v
+[Feux de recul arriere (blancs)]
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Interrupteur fermé (marche arrière engagée) &rarr; signal 12 V envoyé directement à J519.</li>
+        <li>J519 active le relais feux de recul et diffuse l'information sur le K-CAN.</li>
+        <li>J285 peut afficher &laquo; R &raquo; selon les équipements.</li>
+    </ul>
+    <p><strong>Mode défaut :</strong></p>
+    <ul>
+        <li>Contact ouvert permanent : feux de recul jamais activés, pas de DTC automatique, constat visuel uniquement.
+        </li>
+        <li>Contact fermé permanent : feux de recul toujours allumés, J519 peut émettre un DTC &laquo; signal
+            implausible &raquo;.</li>
+        <li><em>Correction :</em> sur le banc, agir sur le simulateur de défaut. En cas réel, remplacer l'interrupteur
+            sur la boîte de vitesses.</li>
+    </ul>
+
+    <h3>Contact / Neiman</h3>
+    <p><strong>Fonction :</strong> le barillet de contact gère l'alimentation des circuits électriques par les bornes
+        30, 15 et 15c. J519 détecte l'état de la borne 15 et diffuse un message de réveil ou de mise en veille à tous
+        les nœuds du bus K-CAN.</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Barillet de contact]
+Cle position Marche --> Borne 15 = 12V
+             |
+             v
+      [J519]  --(K-CAN : wake-up / etat_contact = ON)-->
+             |
+     +-------+-------+-------+
+     |       |       |       |
+     v       v       v       v
+  [J527]  [J285]  [J393]  [J471]
+ s'init.  allume  s'init.  s'init.
+          tdb
+
+Cle retiree --> Borne 15 = 0V
+[J519] --(K-CAN : etat_contact = OFF)--> tous les noeuds --> mode sleep
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Clé en position Marche &rarr; borne 15 passe à 12 V &rarr; J519 détecte le contact.</li>
+        <li>J519 émet un message de réveil sur le K-CAN : tous les nœuds (J527, J285, J393, J471) s'initialisent.</li>
+        <li>Clé retirée &rarr; J519 envoie un message de mise en veille, tous les nœuds s'éteignent progressivement, le
+            bus passe en mode sleep.</li>
+    </ul>
+    <p><strong>Mode défaut (perte de la borne 15) :</strong></p>
+    <ul>
+        <li>J519 ne détecte pas la borne 15 &rarr; aucun message de réveil envoyé sur le bus.</li>
+        <li>Aucun nœud ne s'initialise &rarr; pas d'éclairage, pas de tableau de bord.</li>
+        <li>J519 émet un DTC : tension borne 15 absente ou hors plage.</li>
+        <li><em>Correction :</em> vérifier le fusible borne 15, les connecteurs et les relais. Rétablir l'alimentation.
+        </li>
+    </ul>
+
+    <h3>Feux de détresse</h3>
+    <p><strong>Fonction :</strong> les feux de détresse activent simultanément les quatre clignotants (AV gauche, AV
+        droit, AR gauche, AR droit) à une fréquence de 1,5 Hz. Cette fonction reste active même si la clé est retirée
+        car elle est alimentée par la borne 30 (permanente).</p>
+    <p><strong>Schéma d'interaction :</strong></p>
+    <pre>
+[Bouton detresse (rouge)]
+             |
+             v
+[J527]  --(K-CAN : detresse = 1)--> [J519]
+                                       |
+                          Generateur interne 1,5 Hz
+                                       |
+          +------------+---------------+---------------+------------+
+          |            |               |               |            |
+          v            v               v               v
+[Relais Clign.  [Relais Clign.  [Relais Clign.  [Relais Clign.
+   AV gauche]     AV droit]       AR gauche]      AR droit]
+          |            |               |               |
+          v            v               v               v
+[Clign. AV G]  [Clign. AV D]  [Clign. AR G]  [Clign. AR D]
+
+[J519] --(K-CAN : etat_detresse = 1)--> [J285] --> Temoin double fleche
+Alimentation : borne 30 (active meme cle retiree)
+    </pre>
+    <p><strong>Mode normal :</strong></p>
+    <ul>
+        <li>Conducteur appuie sur le bouton détresse (rouge) &rarr; J527 envoie un message CAN : détresse = 1.</li>
+        <li>J519 génère le signal 1,5 Hz et active les quatre relais clignotants simultanément.</li>
+        <li>J285 affiche le témoin double flèche clignotant.</li>
+    </ul>
+    <p><strong>Mode défaut (rupture bus CAN &mdash; J527 muet) :</strong></p>
+    <ul>
+        <li>J527 ne peut plus envoyer la commande détresse sur le bus.</li>
+        <li>J519 ne reçoit rien &rarr; les feux de détresse ne s'activent pas.</li>
+        <li>Tous les nœuds émettent un DTC : J527 non communicant.</li>
+        <li>J285 affiche un témoin de défaut bus CAN.</li>
+        <li><em>Correction :</em> vérifier la continuité des fils CAN-H et CAN-L entre J527 et J519 au multimètre.
+            Réparer le câble. Le bus se resynchronise automatiquement dès que la continuité est rétablie.</li>
+    </ul>
+    <p><strong>Mode défaut (ampoule grillée) :</strong></p>
+    <ul>
+        <li>J519 détecte un circuit clignotant en circuit ouvert et émet un DTC correspondant.</li>
+        <li><em>Correction :</em> remplacer l'ampoule, effacer le DTC via VCDS.</li>
+    </ul>
+
+    <h2 id="section6">6. Séquence complète de diagnostic automatique</h2>
+    <h3>6.1 Présentation du contexte</h3>
+    <p>
+        Le banc Leybold reproduit le réseau électronique de domaine habitacle d'une Audi A4 B7 (2007). Il comporte un
+        réseau CAN à 100 kbit/s, un réseau LIN, un système d'éclairage, un tableau de bord et une prise de diagnostic
+        OBD. La procédure de diagnostic comprend trois étapes : le scan réseau (identification des calculateurs actifs),
+        la lecture des défauts mémorisés, et la simulation de pannes à l'aide des commutateurs de défaut du panneau B7
+        (Fehlerliste B7 Beleuchtungsboard).
+    </p>
+
+    <h3>6.2 Scan réseau — Identification des nœuds CAN</h3>
+    <p>
+        L'analyse du trafic permet d'identifier les identifiants CAN présents sur le bus ainsi que leurs émetteurs
+        probables :
+    </p>
+
+    <table border="1" cellpadding="8" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+                <th>Identifiant (hex)</th>
+                <th>DLC (octets)</th>
+                <th>Émetteur probable</th>
+                <th>Période typique</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0x00C2</td>
+                <td>8</td>
+                <td>J393 — Confort central</td>
+                <td>~10 ms</td>
+                <td>Statut confort, compteur de cycle en octet 5</td>
+            </tr>
+            <tr>
+                <td>0x01A0</td>
+                <td>8</td>
+                <td>J393 / Passerelle</td>
+                <td>~20 ms</td>
+                <td>Statut système global, compteur en octet 7 (0x10 à 0x1F)</td>
+            </tr>
+            <tr>
+                <td>0x0050</td>
+                <td>4</td>
+                <td>J519 — Électronique centrale</td>
+                <td>~20 ms</td>
+                <td>Message court de synchronisation, octets 2 et 3 : compteur</td>
+            </tr>
+            <tr>
+                <td>0x0320</td>
+                <td>8</td>
+                <td>J527 — Colonne de direction</td>
+                <td>~20 ms</td>
+                <td>Commandes de clignotants, essuie-glace, feux de route (levier)</td>
+            </tr>
+            <tr>
+                <td>0x0390</td>
+                <td>8</td>
+                <td>J519 — Électronique centrale</td>
+                <td>~100 ms</td>
+                <td>Statut des commandes d'éclairage demandées</td>
+            </tr>
+            <tr>
+                <td>0x0420</td>
+                <td>8</td>
+                <td>J519 — Électronique centrale</td>
+                <td>~200 ms</td>
+                <td>Confirmation des sorties éclairage (présent uniquement si fonction active)</td>
+            </tr>
+        </tbody>
+    </table>
+    <p><em>Note : le tableau d'origine contenait 939 lignes supplémentaires de trafic CAN non retranscrites ici.</em>
+    </p>
+
+    <hr>
+    <p align="center"><em>doc_bus_can &mdash; 2025-2026</em></p>
+
+</body>
+<h3>6.2 Scan réseau — Identification des nœuds CAN</h3>
+
+<p>
+    L'analyse du trafic permet d'identifier les identifiants CAN présents sur le bus ainsi que leurs émetteurs probables
+    :
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Identifiant (hex)</th>
+        <th>DLC (octets)</th>
+        <th>Émetteur probable</th>
+        <th>Période typique</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>0x00C2</td>
+        <td>8</td>
+        <td>J393 — Confort central</td>
+        <td>~10 ms</td>
+        <td>Statut confort, compteur de cycle en octet 5</td>
+    </tr>
+    <tr>
+        <td>0x01A0</td>
+        <td>8</td>
+        <td>J393 / Passerelle</td>
+        <td>~20 ms</td>
+        <td>Statut système global, compteur en octet 7 (0x10 à 0x1F)</td>
+    </tr>
+    <tr>
+        <td>0x0050</td>
+        <td>4</td>
+        <td>J519 — Électronique centrale</td>
+        <td>~20 ms</td>
+        <td>Message court de synchronisation, octets 2 et 3 : compteur</td>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>8</td>
+        <td>J527 — Colonne de direction</td>
+        <td>~20 ms</td>
+        <td>Commandes de clignotants, essuie-glace, feux de route (levier)</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>8</td>
+        <td>J519 — Électronique centrale</td>
+        <td>~100 ms</td>
+        <td>Statut des commandes d'éclairage demandées</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>8</td>
+        <td>J519 — Électronique centrale</td>
+        <td>~200 ms</td>
+        <td>Confirmation des sorties éclairage (présent uniquement si fonction active)</td>
+    </tr>
+    <tr>
+        <td>0x04A0</td>
+        <td>8</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Statut nul (8 octets à 0x00), message de présence</td>
+    </tr>
+    <tr>
+        <td>0x04A8</td>
+        <td>8</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Message cyclique avec compteur octet 6</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>8</td>
+        <td>J285 — Combiné d'instruments</td>
+        <td>~200 ms</td>
+        <td>Données capteurs et système (moteur, température, …)</td>
+    </tr>
+    <tr>
+        <td>0x0550</td>
+        <td>3</td>
+        <td>Inconnu</td>
+        <td>~200 ms</td>
+        <td>Message court fixe : 00 80 80</td>
+    </tr>
+    <tr>
+        <td>0x05A0</td>
+        <td>8</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Message cyclique avec compteur octet 4</td>
+    </tr>
+    <tr>
+        <td>0x05D0</td>
+        <td>6</td>
+        <td>Inconnu</td>
+        <td>~100 ms</td>
+        <td>Données fixes : C0 14 61 20 28 47</td>
+    </tr>
+    <tr>
+        <td>0x05F2</td>
+        <td>2</td>
+        <td>Module essuie-glace (M5)</td>
+        <td>événementiel (~500 ms)</td>
+        <td>Indicateur de défaut essuie-glace, uniquement en mode défaut : 8C 8C</td>
+    </tr>
+    <tr>
+        <td>0x0572</td>
+        <td>1</td>
+        <td>Interface LIN (J527)</td>
+        <td>~100 ms</td>
+        <td>Activité détectée sur le bus LIN (trame : 07)</td>
+    </tr>
+</table>
+
+<p>
+    <strong>Observation :</strong> En état sain, 13 identifiants distincts circulent en permanence sur le bus.
+    Les trames 0x0420 et 0x05F2 sont absentes au repos : elles n'apparaissent que lors d'une activation
+    de fonction ou d'un défaut. Le message 0x0572 (1 octet, valeur 0x07) confirme la présence d'activité
+    sur le bus LIN, géré par J527 pour la colonne de direction.
+</p>
+
+<h3>6.3 Lecture et inventaire des défauts — Fehlerliste B7</h3>
+
+<p>
+    Le panneau B7 du banc Leybold dispose de dix commutateurs de défaut (F1 à F10) permettant de
+    simuler des pannes réelles de câblage et de réseau. La liste complète, lue sur le panneau
+    (Fehlerliste B7 Beleuchtungsboard), est la suivante :
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Code défaut</th>
+        <th>Description (traduction)</th>
+        <th>Type de panne</th>
+        <th>Composant affecté</th>
+    </tr>
+    <tr>
+        <td>F1</td>
+        <td>Capteur de lumière / pluie — Interruption de la ligne positive</td>
+        <td>Coupure câblage</td>
+        <td>Capteur pluie/lumière (F4)</td>
+    </tr>
+    <tr>
+        <td>F2</td>
+        <td>Clignotant latéral gauche — Interruption de la ligne positive</td>
+        <td>Coupure câblage</td>
+        <td>Répétiteur clignotant gauche (M19)</td>
+    </tr>
+    <tr>
+        <td>F3</td>
+        <td>Feu de brouillard arrière droit — Interruption de la ligne positive</td>
+        <td>Coupure câblage</td>
+        <td>Feu brouillard arrière droit (M32)</td>
+    </tr>
+    <tr>
+        <td>F4</td>
+        <td>Moteur essuie-glace — Interruption de la ligne de masse</td>
+        <td>Coupure câblage (masse)</td>
+        <td>Moteur essuie-glace (M5)</td>
+    </tr>
+    <tr>
+        <td>F5</td>
+        <td>Feux de route droits — Interruption de la ligne positive</td>
+        <td>Coupure câblage</td>
+        <td>Projecteur feux de route droit (M1)</td>
+    </tr>
+    <tr>
+        <td>F6</td>
+        <td>Feu de recul / attelage remorque — Interruption de la ligne positive</td>
+        <td>Coupure câblage</td>
+        <td>Feu de recul / attelage (M20/X)</td>
+    </tr>
+    <tr>
+        <td>F7</td>
+        <td>Phares antibrouillard et feu de brouillard arrière — Coupure de câble interrupteur</td>
+        <td>Coupure câblage</td>
+        <td>Antibrouillards (M30/M31), bouton commande</td>
+    </tr>
+    <tr>
+        <td>F8</td>
+        <td>CAN High — Court-circuit vers le positif (+12 V)</td>
+        <td>Court-circuit réseau CAN</td>
+        <td>Bus CAN (CAN-H)</td>
+    </tr>
+    <tr>
+        <td>F9</td>
+        <td>CAN Low — Court-circuit vers la masse (GND)</td>
+        <td>Court-circuit réseau CAN</td>
+        <td>Bus CAN (CAN-L)</td>
+    </tr>
+    <tr>
+        <td>F10</td>
+        <td>CAN High et CAN Low — Court-circuit entre eux</td>
+        <td>Court-circuit réseau CAN</td>
+        <td>Bus CAN (CAN-H + CAN-L)</td>
+    </tr>
+</table>
+
+<p>
+    <strong>Avertissement important — F8 et F9 :</strong>
+    Les défauts F8 et F9 ne doivent jamais être activés simultanément.
+    Activer les deux en même temps crée un court-circuit direct entre le +12 V et la masse,
+    ce qui peut endommager irrémédiablement les transceiveurs CAN de tous les calculateurs connectés.
+    Ces deux défauts doivent être testés séparément, l'un après l'autre, en éteignant le banc entre chaque test.
+</p>
+
+<h3>6.4 Analyse technique des défauts simulés et comportement réseau</h3>
+
+<h4>6.4.1 Défauts de câblage (F1 à F7) — Rupture de ligne</h4>
+
+<p>
+    Ces défauts simulent une interruption de câble sur un actionneur ou un capteur. Le bus CAN reste
+    fonctionnel : les trames continuent de circuler normalement. Le calculateur J519 détecte l'absence
+    de réponse (courant nul sur la sortie commandée) et génère un code défaut interne. La manifestation
+    observable dans les trames CAN est limitée mais identifiable dans l'identifiant <strong>0x0420</strong>
+    (statut de sortie de J519), comme détaillé en section 7.
+</p>
+
+<p>
+    De manière générale, lors d'un défaut de type F1 à F7 :
+</p>
+<ul>
+    <li>La trame de commande (ex. 0x0320 de J527) continue d'être émise normalement : la demande est transmise.</li>
+    <li>La trame de statut 0x0390 continue d'indiquer la commande active (ex. bit « feux de route » à 1).</li>
+    <li>La trame 0x0420 (réponse de J519) change de valeur en octet 5, signalant un état de diagnostic différent du mode
+        normal.</li>
+    <li>Le calculateur tente une correction automatique (retry), visible par l'oscillation de certains octets.</li>
+</ul>
+
+<h4>6.4.2 Défaut F8 — Court-circuit CAN-H vers +12 V</h4>
+
+<p>
+    Ce défaut fixe le niveau de CAN-H à +12 V de façon permanente. Le signal différentiel
+    (CAN-H − CAN-L) n'est plus exploitable : tous les bits sont vus comme dominants. Le bus est
+    en état d'erreur permanente (error frame, bus-off). Les nœuds CAN détectent la condition de Bus-Off
+    et se déconnectent après un seuil de 256 erreurs (selon ISO 11898). La communication est totalement
+    interrompue. Le banc n'est plus fonctionnel jusqu'à correction du défaut.
+</p>
+
+
+
+<h4>6.4.3 Défaut F9 — Court-circuit CAN-L vers la masse</h4>
+
+<p>
+    Ce défaut fixe CAN-L à 0 V de façon permanente. La logique est symétrique au cas F8 :
+    le signal différentiel est altéré, tous les bits apparaissent récessifs. Le bus est inutilisable.
+    La même procédure de Bus-Off s'applique aux calculateurs.
+</p>
+
+<p>
+    <strong>Rappel :</strong> F8 et F9 ne doivent jamais être commutés ensemble (voir avertissement ci-dessus).
+</p>
+
+<h4>6.4.4 Défaut F10 — Court-circuit CAN-H / CAN-L entre eux</h4>
+
+<p>
+    Lorsque CAN-H et CAN-L sont court-circuités, la tension différentielle s'annule en permanence.
+    Le bus est perçu comme récessif en continu. Aucune trame dominante ne peut être transmise.
+    La communication est totalement perdue. Les calculateurs passent en mode Bus-Off.
+</p>
+
+<h3>6.5 Tableau de synthèse — Défauts et comportement réseau</h3>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Défaut</th>
+        <th>Bus CAN actif ?</th>
+        <th>Trame commande</th>
+        <th>Trame 0x0390</th>
+        <th>Trame 0x0420 (octet 5)</th>
+        <th>Correction auto</th>
+    </tr>
+    <tr>
+        <td>Aucun (état sain)</td>
+        <td>Oui</td>
+        <td>Normale</td>
+        <td>Normale</td>
+        <td>0x15/0x16 (séquence normale)</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>F2 (clignotant gauche)</td>
+        <td>Oui</td>
+        <td>Idem sain (0x20 en octet 5)</td>
+        <td>Idem sain (0x48 en octet 4)</td>
+        <td>0x17 au lieu de 0x16 (compteur décalé)</td>
+        <td>Retry J519, oscillation octet 2 entre 0x87 et 0x88</td>
+    </tr>
+    <tr>
+        <td>F4 (essuie-glace masse)</td>
+        <td>Oui</td>
+        <td>Normale</td>
+        <td>0x04 en octet 6 (inchangé)</td>
+        <td>Octet 3 passe de 0x3C à 0xFF (moteur absent)</td>
+        <td>Trame 0x05F2 = 8C 8C (~toutes les 500 ms)</td>
+    </tr>
+    <tr>
+        <td>F5 (feux de route droits)</td>
+        <td>Oui</td>
+        <td>Normale</td>
+        <td>0x02 en octet 6 (inchangé)</td>
+        <td>0x32 au lieu de 0x15 (code défaut éclairage)</td>
+        <td>Retry J519, valeur octet 5 décalée à 0x32</td>
+    </tr>
+    <tr>
+        <td>F8 (CAN-H court-circuit +)</td>
+        <td>Non — Bus-Off</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Aucune (reset nécessaire)</td>
+    </tr>
+    <tr>
+        <td>F9 (CAN-L court-circuit masse)</td>
+        <td>Non — Bus-Off</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Aucune (reset nécessaire)</td>
+    </tr>
+    <tr>
+        <td>F10 (CAN-H / CAN-L court-circuit)</td>
+        <td>Non — Bus-Off</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Absente</td>
+        <td>Aucune (reset nécessaire)</td>
+    </tr>
+</table>
+
+<hr>
+
+<!-- ======================================================= -->
+<h2 id="section7">7. Étude fonctionnelle de l'éclairage — Analyse des trames CAN</h2>
+<!-- ======================================================= -->
+
+<h3>7.1 Identifiants CAN clés pour l'éclairage</h3>
+
+<p>
+    L'étude s'appuie sur les captures réalisées avec PCAN-View le 24/02/2026.
+    Pour chaque fonction d'éclairage, trois trames sont déterminantes :
+</p>
+<ul>
+    <li>
+        <strong>0x0320 (J527 — Colonne de direction)</strong> : encode les actions de l'opérateur sur le
+        levier multifonctions (clignotants, essuie-glace, feux de route).
+    </li>
+    <li>
+        <strong>0x0390 (J519 — Électronique centrale électrique)</strong> : confirme la prise en compte de
+        la commande par J519 et indique la fonction active.
+    </li>
+    <li>
+        <strong>0x0420 (J519)</strong> : reflète l'état réel des sorties de puissance (allumage effectif
+        des lampes). C'est le principal indicateur de bon fonctionnement ou de défaut.
+    </li>
+</ul>
+
+<h3>7.2 État de référence — Réseau au repos</h3>
+
+<p>
+    Aucune fonction d'éclairage active.
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données (hex)</th>
+        <th>Signification</th>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>00 04 43 01 00 <strong>00</strong> 00 00</td>
+        <td>Octet 5 = 0x00 : aucune commande active</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 <strong>40</strong> 00 <strong>00</strong> 00</td>
+        <td>Octet 4 = 0x40, octet 6 = 0x00 : pas de fonction active</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td><em>Absent</em></td>
+        <td>J519 n'émet pas de statut de sortie au repos</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>01 00 00 <strong>00</strong> 80 00 00 00</td>
+        <td>Octet 3 = 0x00 : aucune fonction éclairage active</td>
+    </tr>
+</table>
+
+<h3>7.3 Clignotants (gauche)</h3>
+
+<p>
+    Le levier de clignotant gauche est activé. La trame J527 change immédiatement.
+</p>
+
+<h4>Trame normale (clignotant gauche actif)</h4>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données normales (hex)</th>
+        <th>Différence par rapport au repos</th>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>00 04 43 01 00 <strong>20</strong> 00 00</td>
+        <td>Octet 5 : 0x00 → <strong>0x20</strong> (bit 5 = clignotant gauche)</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 <strong>48</strong> 00 00 00</td>
+        <td>Octet 4 : 0x40 → <strong>0x48</strong> (bit 3 = clignotant pris en compte)</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 <strong>88</strong> FF <strong>C1</strong> 16 00 00</td>
+        <td>Octet 2 = 0x88 (clignotant), octet 4 = 0xC1 (bit 0 = clignotant actif)</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>61 4C 00 <strong>07</strong> 80 00 00 00</td>
+        <td>Octet 3 = 0x07 : indique une fonction éclairage active</td>
+    </tr>
+</table>
+
+<h4>Trame en défaut (F2 — coupure ligne positive clignotant gauche)</h4>
+
+<p>
+    Le commutateur F2 est activé (interruption de la ligne positive du répétiteur clignotant gauche M19).
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données en défaut (hex)</th>
+        <th>Différence par rapport au normal</th>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>00 04 43 01 00 <strong>20</strong> 00 00</td>
+        <td>Inchangé : J527 continue d'envoyer la commande</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 <strong>48</strong> 00 00 00</td>
+        <td>Inchangé : J519 a bien reçu la commande</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 <strong>87</strong> FF <strong>C1</strong> <strong>17</strong> 00 00</td>
+        <td>Octet 2 : oscille entre <strong>0x87</strong> et 0x88 (retry). Octet 5 = 0x17 (décalé vs 0x16)</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>61 4C 00 <strong>07</strong> 80 00 00 00</td>
+        <td>Inchangé</td>
+    </tr>
+</table>
+
+<p>
+    <strong>Analyse :</strong> La commande est bien émise par J527 et reçue par J519. Cependant,
+    J519 ne détecte pas de réponse en courant sur la sortie M19 (clignotant gauche coupé).
+    En conséquence, l'octet 2 de la trame 0x0420 oscille entre 0x87 et 0x88 : J519 effectue des tentatives
+    de réactivation (mode retry), alternant l'état de la sortie. L'octet 5 démarre à 0x17 (au lieu de 0x16 en état
+    sain),
+    ce qui indique un changement d'état interne dans le compteur de diagnostic de J519.
+</p>
+
+<p>
+    <strong>Correction automatique :</strong> Le système n'effectue pas de correction fonctionnelle
+    (le fil est physiquement coupé). Les autres clignotants continuent de fonctionner. Un code défaut
+    est mémorisé dans J519. La correction définitive nécessite une réparation physique du câblage,
+    suivie d'un effacement de la mémoire de défauts via VCDS.
+</p>
+
+<h3>7.4 Feux de route (pleins phares)</h3>
+
+<p>
+    Activation des feux de route par le levier J527.
+</p>
+
+<h4>Trame normale (feux de route actifs)</h4>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données normales (hex)</th>
+        <th>Différence par rapport au repos</th>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>00 04 43 01 00 <strong>00</strong> 00 00</td>
+        <td>Octet 5 inchangé à 0x00 (commande feux de route via autre bit / autre mécanisme)</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 40 00 <strong>02</strong> 00</td>
+        <td>Octet 6 : 0x00 → <strong>0x02</strong> (bit 1 = feux de route actifs)</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 <strong>87</strong> FF C0 <strong>15</strong> 00 00</td>
+        <td>Octet 2 = 0x87, octet 5 = 0x15 (séquence normale)</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>61 4C 00 <strong>07</strong> 80 00 00 00</td>
+        <td>Octet 3 = 0x07 : fonction active</td>
+    </tr>
+</table>
+
+<h4>Trame en défaut (F5 — coupure ligne positive feux de route droits)</h4>
+
+<p>
+    Le commutateur F5 est activé (interruption de la ligne positive du projecteur droit M1).
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données en défaut (hex)</th>
+        <th>Différence par rapport au normal</th>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 40 00 <strong>02</strong> 00</td>
+        <td>Inchangé : J519 reçoit toujours la commande feux de route</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 87 FF C0 <strong>32</strong> 00 00</td>
+        <td>Octet 5 : <strong>0x15 → 0x32</strong> (indicateur de défaut éclairage côté droit)</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>61 4C 00 <strong>07</strong> 80 00 00 00</td>
+        <td>Inchangé</td>
+    </tr>
+</table>
+
+<p>
+    <strong>Analyse :</strong> Le changement le plus significatif est l'octet 5 de la trame 0x0420,
+    qui passe de 0x15 (état normal) à <strong>0x32</strong> (état défaut). Ce changement de valeur
+    constitue la signature de diagnostic de J519 : le projecteur droit ne répond pas à la commande
+    (absence de courant détectée en retour). Le projecteur gauche fonctionne toujours (J519 commande
+    les deux côtés indépendamment). Un code défaut « Feux de route droits — rupture ligne positive »
+    est enregistré dans la mémoire de J519.
+</p>
+
+<p>
+    <strong>Correction automatique :</strong> J519 tente un retry (visible dans la séquence de
+    l'octet 5 qui continue d'incrémenter : 0x32, 0x33, 0x34…). Aucune correction automatique
+    n'est possible sur une rupture de câble physique. La correction nécessite la réparation du câblage
+    et l'effacement des défauts via VCDS.
+</p>
+
+<h3>7.5 Essuie-glace</h3>
+
+<p>
+    Activation de l'essuie-glace par le levier J527.
+</p>
+
+<h4>Trame normale (essuie-glace actif)</h4>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données normales (hex)</th>
+        <th>Différence par rapport au repos</th>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 40 00 <strong>04</strong> 00</td>
+        <td>Octet 6 : 0x00 → <strong>0x04</strong> (bit 2 = essuie-glace actif)</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 86 <strong>3C</strong> C0 15 00 00</td>
+        <td>Octet 3 : 0xFF → <strong>0x3C</strong> (moteur en rotation, retour courant détecté)</td>
+    </tr>
+    <tr>
+        <td>0x05F2</td>
+        <td><em>Absent</em></td>
+        <td>Aucun défaut signalé</td>
+    </tr>
+</table>
+
+<h4>Trame en défaut (F4 — coupure ligne de masse moteur essuie-glace)</h4>
+
+<p>
+    Le commutateur F4 est activé (interruption de la ligne de masse du moteur M5).
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Données en défaut (hex)</th>
+        <th>Différence par rapport au normal</th>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>10 00 00 00 40 00 <strong>04</strong> 00</td>
+        <td>Inchangé : commande toujours émise par J519</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>82 86 86 <strong>FF</strong> C0 14 00 00</td>
+        <td>Octet 3 : <strong>0x3C → 0xFF</strong> (moteur absent, pas de retour courant)</td>
+    </tr>
+    <tr>
+        <td>0x05F2</td>
+        <td><strong>8C 8C</strong></td>
+        <td>Trame apparaissant toutes les ~500 ms : indicateur de défaut moteur M5</td>
+    </tr>
+</table>
+
+<p>
+    <strong>Analyse :</strong> En mode défaut, deux changements clés sont observés. Premièrement,
+    l'octet 3 de la trame 0x0420 passe de 0x3C à 0xFF : J519 ne détecte plus le retour courant du
+    moteur d'essuie-glace M5 (la masse étant coupée, le moteur ne tourne pas). Deuxièmement,
+    la trame <strong>0x05F2</strong> (2 octets, valeur 0x8C 0x8C) apparaît périodiquement
+    (toutes les ~500 ms) : il s'agit d'un signal de diagnostic émis par le module essuie-glace,
+    indiquant une condition de défaut (code 0x8C = défaut de masse / circuit ouvert détecté).
+</p>
+
+<p>
+    <strong>Correction automatique :</strong> J519 alterne l'état de la sortie (octet 2 de 0x0420
+    oscille entre 0x86 et 0x87) pour tenter de réactiver le moteur. En l'absence de correction,
+    J519 mémorise un code défaut. La trame 0x05F2 continue d'être émise à intervalles réguliers
+    tant que le défaut est présent. La correction définitive requiert la réparation de la connexion
+    de masse et l'effacement des codes via VCDS.
+</p>
+
+<h3>7.6 Récapitulatif — Signatures CAN par fonction</h3>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>Fonction</th>
+        <th>0x0320 octet 5</th>
+        <th>0x0390 octet 4 / octet 6</th>
+        <th>0x0420 état normal</th>
+        <th>0x0420 état défaut</th>
+        <th>Trame défaut spécifique</th>
+    </tr>
+    <tr>
+        <td>Repos</td>
+        <td>0x00</td>
+        <td>0x40 / 0x00</td>
+        <td><em>Absent</em></td>
+        <td>—</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>Clignotant gauche</td>
+        <td>0x20</td>
+        <td>0x48 / 0x00</td>
+        <td>… 88 FF C1 <strong>16</strong> …</td>
+        <td>… <strong>87</strong> FF C1 <strong>17</strong> … (oscille)</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>Feux de route</td>
+        <td>0x00</td>
+        <td>0x40 / <strong>0x02</strong></td>
+        <td>… 87 FF C0 <strong>15</strong> …</td>
+        <td>… 87 FF C0 <strong>32</strong> … (code défaut)</td>
+        <td>—</td>
+    </tr>
+    <tr>
+        <td>Essuie-glace</td>
+        <td>0x00</td>
+        <td>0x40 / <strong>0x04</strong></td>
+        <td>… 86 <strong>3C</strong> C0 15 …</td>
+        <td>… 86 <strong>FF</strong> C0 14 … (moteur mort)</td>
+        <td>0x05F2 = 8C 8C (~500 ms)</td>
+    </tr>
+</table>
+
+<hr>
+
+<!-- ======================================================= -->
+<h2 id="section8">8. Procédure d'exploitation du banc Leybold</h2>
+<!-- ======================================================= -->
+
+<h3>8.1 Mise sous tension et alimentation</h3>
+
+<p>
+    Le banc Leybold requiert une alimentation 12 V / 14 V continue, conforme à la tension nominale d'un
+    réseau de bord automobile. La connexion s'effectue sur les deux douilles situées en bas au centre du panneau :
+</p>
+<ul>
+    <li><strong>Douille noire</strong> : masse (GND, 0 V)</li>
+    <li><strong>Douille 30</strong> : plus permanent (+12 V / +14 V)</li>
+</ul>
+<p>
+    <strong>Attention :</strong> Utiliser impérativement une batterie (ou une alimentation de laboratoire
+    de forte puissance &gt; 5 A) pour l'exécution des tests d'actionneurs (test de sortie J519).
+    Les alimentations de laboratoire standard ne fournissent pas le courant suffisant pour alimenter
+    les lampes et les actionneurs électriques, ce qui peut provoquer l'abandon automatique du test d'actionneur.
+</p>
+
+<p>Vérifications préalables à effectuer avant mise sous tension :</p>
+<ul>
+    <li>Tous les commutateurs de défaut (F1 à F10) sont en position <em>OFF</em> (état sain)</li>
+    <li>Aucun court-circuit visible sur le câblage du banc</li>
+    <li>L'interface PCAN-USB est débranchée du PC (connexion après mise sous tension)</li>
+    <li>L'alimentation est réglée sur 12 V avant connexion</li>
+</ul>
+
+<h3>8.2 Initialisation du réseau CAN</h3>
+
+<p>
+    Après mise sous tension, les calculateurs du banc (J519, J527, J285, J393) effectuent
+    leur séquence d'initialisation (bootup CAN). Cette phase dure environ 1 à 2 secondes.
+    À l'issue de l'initialisation :
+</p>
+<ul>
+    <li>Le combiné d'instruments J285 s'allume brièvement (test des voyants)</li>
+    <li>Le bus CAN est actif : on peut observer les trames périodiques sur PCAN-View</li>
+    <li>Les identifiants 0x00C2, 0x01A0, 0x0320, 0x04A0, 0x04A8, 0x05A0, 0x0050 circulent en continu</li>
+</ul>
+
+<p>
+    Le codage des calculateurs doit être vérifié avant toute expérimentation :
+</p>
+<ul>
+    <li><strong>J393 — Module de confort central (adresse VCDS 46)</strong> : code 6720</li>
+    <li><strong>J527 — Colonne de direction (adresse VCDS 16)</strong> : code 11 (avec LIN : 3012)</li>
+    <li><strong>J519 — Électronique centrale (adresse VCDS 09)</strong> : code 11101</li>
+    <li><strong>J285 — Combiné d'instruments (adresse VCDS 17)</strong> : canal d'adaptation 60 à régler sur la valeur
+        1025</li>
+</ul>
+<p>
+    <em>Remarque :</em> Le combiné J285 (tableau de bord) est compatible uniquement avec le numéro de
+    pièce <strong>8E0 920 933 P</strong> ou <strong>8E0 920 933 PX</strong>. Tout autre numéro de pièce
+    doit être signalé à l'enseignant avant de poursuivre.
+</p>
+
+<h3>8.3 Connexion diagnostic</h3>
+
+<p>
+    La connexion de l'outil de diagnostic s'effectue sur la prise OBD-II du banc.
+</p>
+
+<h4>8.3.1 Avec l'interface PCAN-USB (capture de trames)</h4>
+<ol>
+    <li>Brancher l'interface PCAN-USB sur la prise OBD du banc via le faisceau fourni. Connecter également la masse.
+    </li>
+    <li>Connecter l'interface PCAN-USB au port USB du PC.</li>
+    <li>Lancer <strong>PCAN-View v5.3.3</strong>.</li>
+    <li>Sélectionner le canal PCAN-USB, vitesse <strong>100 kbit/s</strong>.</li>
+    <li>Cliquer sur <em>Connect</em>. Les trames CAN apparaissent dans la fenêtre de réception.</li>
+    <li>Pour démarrer un enregistrement, utiliser <em>Trace → Start</em>. Sauvegarder au format <em>.trc</em>.</li>
+</ol>
+
+<h4>8.3.2 Avec VCDS (diagnostic applicatif)</h4>
+<ol>
+    <li>Brancher l'adaptateur OBD-CAN + USB (Ross-Tech ou équivalent) sur la prise OBD du banc.</li>
+    <li>Connecter l'adaptateur au port USB du PC.</li>
+    <li>Lancer le logiciel <strong>VCDS</strong>.</li>
+    <li>Effectuer un <em>Scan réseau</em> (Auto-Scan) pour détecter tous les calculateurs présents.
+        Les calculateurs détectés nominalement sont : J519 (09), J527 (16), J285 (17), J393 (46).</li>
+    <li>Les défauts présents dans chaque calculateur s'affichent après le scan.</li>
+</ol>
+
+<p>
+    <strong>Codes défauts attendus en état sain</strong> (présence normale liée aux calculateurs absents du banc) :
+</p>
+<ul>
+    <li>J519 (09) : 01331 049 — Unité porte conducteur : pas de communication ; 01320 049 — Climatronic : pas de
+        communication</li>
+    <li>J393 (46) : 01331 049, 01332 049 (portes gauche/droite), 01320 049, 01366 036 (collision)</li>
+    <li>J527 (16) : 00888 037 — Essuie-glace intermittent défectueux ; 01331 049, 01332 049</li>
+    <li>J285 (17) : 01314 049 — Calculateur moteur pas de communication ; 01331 049, 01332 049, 01320 049 ; 01128 035,
+        00562 030</li>
+</ul>
+<p>Ces défauts sont inhérents au banc (calculateurs de portes, moteur, climatisation absents) et ne constituent pas des
+    anomalies.</p>
+
+<h3>8.4 Test automatique des actionneurs</h3>
+
+<p>
+    Le test des actionneurs est réalisé depuis VCDS → Calculateur 09 (J519) → Tests des actionneurs.
+    Il permet de commander individuellement chaque sortie de puissance de J519 (lampes, relais) et
+    de vérifier son bon fonctionnement. La procédure est la suivante :
+</p>
+<ol>
+    <li>Vérifier que l'alimentation est une batterie ou une source &gt; 5 A.</li>
+    <li>Dans VCDS, ouvrir le calculateur 09 → <em>Test des actionneurs</em>.</li>
+    <li>Sélectionner la sortie à tester (ex. M1 = phare route droit, M5 = moteur essuie-glace, etc.).</li>
+    <li>Cliquer sur <em>Exécuter</em> : l'actionneur s'active pendant quelques secondes.</li>
+    <li>Observer l'activation physique sur le banc ET la modification des trames CAN dans PCAN-View (notamment 0x0420).
+    </li>
+    <li>Si la sortie ne répond pas, vérifier le câblage et les commutateurs de défaut.</li>
+    <li>Répéter pour chaque actionneur à tester.</li>
+</ol>
+
+<p>
+    En parallèle, les manipulations manuelles suivantes peuvent être effectuées avec PCAN-View actif :
+</p>
+<ul>
+    <li>Activer le levier de clignotant gauche → observer 0x0320 octet 5 = 0x20</li>
+    <li>Activer les feux de route → observer 0x0390 octet 6 = 0x02 et l'apparition de 0x0420</li>
+    <li>Activer l'essuie-glace → observer 0x0390 octet 6 = 0x04 et 0x0420 octet 3 = 0x3C</li>
+    <li>Activer un défaut (ex. F5) → observer le changement d'octet 5 dans 0x0420 (0x15 → 0x32)</li>
+</ul>
+
+<h3>8.5 Simulation de défauts CAN (F8, F9, F10)</h3>
+
+<p>
+    Ces manipulations perturbent le bus CAN. Elles doivent être effectuées avec les précautions suivantes :
+</p>
+<ul>
+    <li>Fermer PCAN-View et déconnecter l'interface PCAN-USB <em>avant</em> d'activer F8, F9 ou F10.</li>
+    <li>N'activer qu'<em>un seul</em> commutateur parmi F8 et F9 à la fois (jamais simultanément).</li>
+    <li>Observer visuellement l'arrêt des voyants sur J285 (bus-off).</li>
+    <li>Désactiver le commutateur, puis couper l'alimentation du banc pendant 5 secondes.</li>
+    <li>Remettre sous tension : les calculateurs repassent en mode normal après réinitialisation.</li>
+    <li>Reconnecter l'interface PCAN-USB et vérifier la reprise du trafic CAN.</li>
+</ul>
+
+<h3>8.6 Arrêt du banc</h3>
+
+<p>La procédure d'arrêt doit être suivie dans l'ordre indiqué pour éviter tout dommage :</p>
+<ol>
+    <li>Désactiver toutes les fonctions actives (levier en position repos, tous clignotants éteints).</li>
+    <li>Remettre tous les commutateurs de défaut (F1 à F10) en position <em>OFF</em>.</li>
+    <li>Dans PCAN-View, arrêter l'enregistrement en cours et sauvegarder le fichier .trc.</li>
+    <li>Fermer PCAN-View et VCDS.</li>
+    <li>Déconnecter l'interface PCAN-USB du banc et du PC.</li>
+    <li>Couper l'alimentation du banc (retirer les connexions des douilles d'alimentation).</li>
+    <li>Ranger le câblage de l'interface sur le banc.</li>
+</ol>
+
+<p>
+    <strong>Note :</strong> En fin de session, effacer les mémoires de défauts de tous les calculateurs
+    via VCDS (option <em>Effacer tous les codes défauts</em> après le scan réseau). Cela permet de retrouver
+    l'état de référence propre pour la prochaine séance.
+</p>
+
+<hr>
+
+<!-- ======================================================= -->
+<h2 id="annexe">Annexe — Tableau récapitulatif des identifiants CAN observés</h2>
+<!-- ======================================================= -->
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <th>ID hex</th>
+        <th>Décimal</th>
+        <th>DLC</th>
+        <th>Exemple de données (hex)</th>
+        <th>Émetteur probable</th>
+        <th>Période</th>
+        <th>Présence</th>
+    </tr>
+    <tr>
+        <td>0x0050</td>
+        <td>80</td>
+        <td>4</td>
+        <td>00 A0 XX XX</td>
+        <td>J519</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x00C2</td>
+        <td>194</td>
+        <td>8</td>
+        <td>64 00 00 00 80 XX 00 YY</td>
+        <td>J393</td>
+        <td>~10 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x01A0</td>
+        <td>416</td>
+        <td>8</td>
+        <td>00 00 00 00 FE FE 00 XX</td>
+        <td>J393 / Passerelle</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x0320</td>
+        <td>800</td>
+        <td>8</td>
+        <td>00 04 43 01 00 XX 00 00</td>
+        <td>J527</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x0390</td>
+        <td>912</td>
+        <td>8</td>
+        <td>10 00 00 00 4X 00 XX 00</td>
+        <td>J519</td>
+        <td>~100 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x0420</td>
+        <td>1056</td>
+        <td>8</td>
+        <td>82 86 XX XX CX XX 00 00</td>
+        <td>J519</td>
+        <td>~200 ms</td>
+        <td>Fonction active</td>
+    </tr>
+    <tr>
+        <td>0x04A0</td>
+        <td>1184</td>
+        <td>8</td>
+        <td>00 00 00 00 00 00 00 00</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x04A8</td>
+        <td>1192</td>
+        <td>8</td>
+        <td>28 80 03 10 FE 00 XX YY</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x0520</td>
+        <td>1312</td>
+        <td>8</td>
+        <td>XX XX 00 XX 80 00 00 00</td>
+        <td>J285</td>
+        <td>~200 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x0550</td>
+        <td>1360</td>
+        <td>3</td>
+        <td>00 80 80</td>
+        <td>Inconnu</td>
+        <td>~200 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x05A0</td>
+        <td>1440</td>
+        <td>8</td>
+        <td>7B 00 00 00 XX 00 00 ED</td>
+        <td>Inconnu</td>
+        <td>~20 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x05D0</td>
+        <td>1488</td>
+        <td>6</td>
+        <td>C0 14 61 20 28 47</td>
+        <td>Inconnu</td>
+        <td>~100 ms</td>
+        <td>Permanent</td>
+    </tr>
+    <tr>
+        <td>0x05D2</td>
+        <td>1490</td>
+        <td>8</td>
+        <td>00 00 00 00 00 00 00 00</td>
+        <td>Inconnu</td>
+        <td>événementiel</td>
+        <td>Occasionnel</td>
+    </tr>
+    <tr>
+        <td>0x05F2</td>
+        <td>1522</td>
+        <td>2</td>
+        <td>8C 8C</td>
+        <td>Module M5 (essuie-glace)</td>
+        <td>~500 ms</td>
+        <td>Défaut F4 uniquement</td>
+    </tr>
+    <tr>
+        <td>0x0572</td>
+        <td>1394</td>
+        <td>1</td>
+        <td>07</td>
+        <td>Interface LIN (J527)</td>
+        <td>~100 ms</td>
+        <td>Permanent</td>
+    </tr>
+</table>
+
+<hr>
+
+</html>
