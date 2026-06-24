@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Documentation technique &mdash; Bus CAN</title>
+</head>
+<body>
+
+<h1>Documentation technique &mdash; Bus CAN</h1>
+<p><em>Banc Leybold &mdash; Audi A4 B7 (2007)</em></p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2>3. Documentation des calculateurs</h2>
+<!-- ============================================================ -->
+
+<p>
+Le banc reproduit le r&eacute;seau K-CAN (Komfort-CAN) d'une Audi A4 B7.
+Ce r&eacute;seau tourne &agrave; 100&nbsp;kbit/s.
+Les cinq calculateurs pr&eacute;sents sur le banc sont les suivants&nbsp;:
+</p>
+
+<h3>J519 &mdash; Unit&eacute; &eacute;lectrique centrale</h3>
+<p>
+Le J519 est le calculateur principal du r&eacute;seau K-CAN. Il g&egrave;re tout l'&eacute;clairage
+ext&eacute;rieur du v&eacute;hicule&nbsp;: feux de position, feux de croisement, feux de route,
+clignotants, antibrouillard, feux de recul et &eacute;clairage de la plaque d'immatriculation.
+Il pilote les relais correspondants et re&ccedil;oit les commandes envoy&eacute;es par J527 via
+le bus CAN. Il est aliment&eacute; en permanence par la borne 30 et par la borne 15 lorsque
+le contact est mis.
+</p>
+
+<h3>J527 &mdash; &Eacute;lectronique du volant (commodos)</h3>
+<p>
+Le J527 lit l'&eacute;tat de tous les commodos de la colonne de direction&nbsp;: commodo gauche
+(clignotants, appels de phares, feux de route, feux de position) et commodo droit
+(essuie-glace&nbsp;: OFF, intermittence, vitesse 1, vitesse 2, lave-glace). Il transmet ces
+informations sur le bus K-CAN &agrave; destination de J519 et J285. Il g&egrave;re &eacute;galement un bus
+LIN en interne pour les boutons du volant (r&eacute;gulateur de vitesse, etc.) et pour le
+capteur de pluie.
+</p>
+
+<h3>J471 &mdash; Calculateur de d&eacute;tection de remorque</h3>
+<p>
+Le J471 d&eacute;tecte automatiquement si une remorque est connect&eacute;e &agrave; la prise 13 voies,
+en analysant la charge &eacute;lectrique sur les circuits d'&eacute;clairage. Il informe J519 de
+la pr&eacute;sence d'une remorque afin d'adapter le comportement des clignotants et de
+g&eacute;rer l'alimentation des feux de remorque (position, stop, clignotants, recul, antibrouillard).
+</p>
+
+<h3>J285 &mdash; Combin&eacute; d'instruments</h3>
+<p>
+Le J285 est le tableau de bord. Il re&ccedil;oit les informations du bus K-CAN et les affiche
+au conducteur&nbsp;: t&eacute;moins lumineux (clignotants actifs, feux de position, antibrouillard,
+d&eacute;fauts), donn&eacute;es moteur, messages d'alerte. Il d&eacute;tecte &eacute;galement les pertes de
+communication CAN et affiche un t&eacute;moin de d&eacute;faut si un calculateur ne r&eacute;pond plus.
+</p>
+
+<h3>J393 &mdash; Module central du syst&egrave;me de confort (ZKE)</h3>
+<p>
+Le J393 centralise les fonctions de confort de l'habitacle&nbsp;: verrouillage et
+d&eacute;verrouillage centralis&eacute; des portes, commande des l&egrave;ve-vitres conducteur et passager,
+r&eacute;glage des r&eacute;troviseurs ext&eacute;rieurs, &eacute;clairage int&eacute;rieur. Il est aliment&eacute; en permanence
+par la borne 30 et sert de ma&icirc;tre LIN pour les modules de porti&egrave;res.
+</p>
+
+<h3>Tableau r&eacute;capitulatif</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>ECU</th>
+      <th>Nom</th>
+      <th>R&ocirc;le principal</th>
+      <th>Bus</th>
+      <th>Vitesse</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>J519</td><td>BCM</td><td>&Eacute;clairage ext&eacute;rieur, commande relais</td><td>K-CAN</td><td>100&nbsp;kbit/s</td></tr>
+    <tr><td>J527</td><td>LSM</td><td>Commodos colonne de direction</td><td>K-CAN + LIN</td><td>100&nbsp;kbit/s</td></tr>
+    <tr><td>J471</td><td>AHK</td><td>D&eacute;tection de remorque</td><td>K-CAN</td><td>100&nbsp;kbit/s</td></tr>
+    <tr><td>J285</td><td>KI</td><td>Combin&eacute; d'instruments</td><td>K-CAN</td><td>100&nbsp;kbit/s</td></tr>
+    <tr><td>J393</td><td>ZKE</td><td>Confort&nbsp;: portes, l&egrave;ve-vitres, r&eacute;troviseurs</td><td>K-CAN + LIN</td><td>100&nbsp;kbit/s</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2>4. Rappel th&eacute;orique CAN</h2>
+<!-- ============================================================ -->
+
+<h3>CAN-H et CAN-L &mdash; Signal diff&eacute;rentiel</h3>
+<p>
+Le bus CAN utilise deux fils&nbsp;: CAN-H (High) et CAN-L (Low). Le signal est
+diff&eacute;rentiel, c'est-&agrave;-dire que l'information est port&eacute;e par la diff&eacute;rence de tension
+entre les deux fils et non par la valeur absolue de l'un d'eux. Cela rend le bus
+tr&egrave;s r&eacute;sistant aux perturbations &eacute;lectromagn&eacute;tiques.
+</p>
+
+<h3>Bit dominant / Bit r&eacute;cessif</h3>
+<p>Il existe deux &eacute;tats logiques sur le bus CAN&nbsp;:</p>
+<ul>
+  <li><strong>Bit r&eacute;cessif (1)</strong>&nbsp;: CAN-H &asymp;&nbsp;2,5&nbsp;V, CAN-L &asymp;&nbsp;2,5&nbsp;V, diff&eacute;rentiel &asymp;&nbsp;0&nbsp;V. C'est l'&eacute;tat de repos du bus.</li>
+  <li><strong>Bit dominant (0)</strong>&nbsp;: CAN-H &asymp;&nbsp;3,5&nbsp;V, CAN-L &asymp;&nbsp;1,5&nbsp;V, diff&eacute;rentiel &asymp;&nbsp;2&nbsp;V.</li>
+</ul>
+<p>
+La logique est dite filaire-ET&nbsp;: si un seul n&oelig;ud envoie un bit dominant (0), le bus est
+dominant, peu importe ce qu'envoient les autres n&oelig;uds. Un bit r&eacute;cessif n'est pr&eacute;sent
+sur le bus que si aucun n&oelig;ud n'envoie de dominant.
+</p>
+
+<h3>Arbitrage</h3>
+<p>
+Quand plusieurs n&oelig;uds tentent d'&eacute;mettre en m&ecirc;me temps, CAN utilise un arbitrage non
+destructif bas&eacute; sur l'identifiant du message. Chaque n&oelig;ud compare bit par bit ce qu'il
+envoie avec ce qu'il lit sur le bus. Si un n&oelig;ud envoie un bit r&eacute;cessif (1) mais lit un
+dominant (0), il sait qu'un autre n&oelig;ud plus prioritaire &eacute;met et il s'arr&ecirc;te imm&eacute;diatement.
+Le message avec l'identifiant de valeur num&eacute;rique la plus basse gagne, car il comporte plus
+de bits dominants en t&ecirc;te. Aucune donn&eacute;e n'est perdue car le n&oelig;ud gagnant n'a pas &eacute;t&eacute;
+interrompu.
+</p>
+
+<h3>Trame standard CAN 2.0A &mdash; identifiant 11 bits</h3>
+<p>
+C'est le format utilis&eacute; dans les r&eacute;seaux automobile classiques comme le K-CAN du banc.
+Une trame se compose des champs suivants&nbsp;:
+</p>
+<ul>
+  <li><strong>SOF</strong> (1 bit)&nbsp;: Start Of Frame, bit dominant qui marque le d&eacute;but de la trame et synchronise les n&oelig;uds.</li>
+  <li><strong>ID</strong> (11 bits)&nbsp;: identifiant du message, d&eacute;termine la priorit&eacute;.</li>
+  <li><strong>RTR</strong> (1 bit)&nbsp;: type de trame &mdash; 0 = donn&eacute;es, 1 = requ&ecirc;te &agrave; distance.</li>
+  <li><strong>IDE</strong> (1 bit)&nbsp;: extension d'identifiant &mdash; 0 pour la trame standard.</li>
+  <li><strong>DLC</strong> (4 bits)&nbsp;: nombre d'octets de donn&eacute;es (0 &agrave; 8).</li>
+  <li><strong>DATA</strong> (0 &agrave; 8 octets)&nbsp;: les donn&eacute;es utiles.</li>
+  <li><strong>CRC</strong> (15 bits + d&eacute;limiteur)&nbsp;: contr&ocirc;le de redondance cyclique.</li>
+  <li><strong>ACK</strong> (2 bits)&nbsp;: les r&eacute;cepteurs mettent ce bit &agrave; dominant pour confirmer la r&eacute;ception.</li>
+  <li><strong>EOF</strong> (7 bits r&eacute;cessifs)&nbsp;: fin de trame.</li>
+</ul>
+<p>Repr&eacute;sentation sch&eacute;matique&nbsp;:</p>
+<pre>
++-----+--------+-----+-----+----+-----+----------+--------+-----+-------+
+| SOF |   ID   | RTR | IDE | r0 | DLC |   DATA   |  CRC   | ACK |  EOF  |
+| 1 b |  11 b  | 1 b | 1 b | 1b |  4b | 0 a 8 o  | 15+1 b | 2 b |  7 b  |
++-----+--------+-----+-----+----+-----+----------+--------+-----+-------+
+</pre>
+
+<h3>Trame &eacute;tendue CAN 2.0B &mdash; identifiant 29 bits</h3>
+<p>
+La trame &eacute;tendue ajoute 18 bits &agrave; l'identifiant (champ ID-B), pour un total de 29&nbsp;bits.
+Elle est utilis&eacute;e notamment dans les protocoles J1939 (poids lourds) et pour certains
+diagnostics OBD. Le bit IDE vaut 1 pour indiquer qu'il s'agit d'une trame &eacute;tendue. Le
+nombre d'identifiants possibles passe ainsi &agrave; plus de 536&nbsp;millions.
+</p>
+<pre>
++-----+------+-----+-----+-------+----+----+-----+----------+--------+-----+-------+
+| SOF |  IDA | SRR | IDE |  ID-B | r1 | r0 | DLC |   DATA   |  CRC   | ACK |  EOF  |
+| 1 b | 11 b | 1 b | 1 b |  18 b | 1b | 1b |  4b | 0 a 8 o  | 15+1 b | 2 b |  7 b  |
++-----+------+-----+-----+-------+----+----+-----+----------+--------+-----+-------+
+</pre>
+
+<h3>D&eacute;tection d'erreurs</h3>
+<p>CAN int&egrave;gre 5 m&eacute;canismes de d&eacute;tection d'erreurs&nbsp;:</p>
+<ul>
+  <li><strong>CRC Check</strong>&nbsp;: le r&eacute;cepteur recalcule le CRC et le compare &agrave; celui re&ccedil;u. D&eacute;tecte les erreurs de transmission.</li>
+  <li><strong>Frame Check</strong>&nbsp;: v&eacute;rification du format de la trame (d&eacute;limiteurs, EOF). D&eacute;tecte les erreurs de structure.</li>
+  <li><strong>ACK Check</strong>&nbsp;: l'&eacute;metteur v&eacute;rifie que le slot ACK est dominant, ce qui signifie qu'au moins un n&oelig;ud a bien re&ccedil;u le message.</li>
+  <li><strong>Bit Monitoring</strong>&nbsp;: l'&eacute;metteur compare chaque bit envoy&eacute; avec ce qu'il lit sur le bus. D&eacute;tecte une erreur de bit.</li>
+  <li><strong>Stuff Check</strong>&nbsp;: apr&egrave;s 5 bits identiques cons&eacute;cutifs, un bit invers&eacute; doit &ecirc;tre pr&eacute;sent. Une violation de cette r&egrave;gle indique une erreur.</li>
+</ul>
+<p>
+Chaque n&oelig;ud maintient deux compteurs d'erreurs (TEC et REC). Si les erreurs s'accumulent,
+le n&oelig;ud passe en <strong>Error Passive</strong> (il continue d'&eacute;mettre mais de fa&ccedil;on moins agressive),
+puis en <strong>Bus Off</strong> (il se d&eacute;connecte du bus).
+</p>
+
+<hr>
+
+<!-- ============================================================ -->
+<h2>5. Interfaces CAN</h2>
+<!-- ============================================================ -->
+
+<h3>Lighting System I &mdash; Feux de position et de croisement</h3>
+
+<p><strong>Fonction&nbsp;:</strong> le Lighting System I g&egrave;re les feux de position avant/arri&egrave;re
+et les phares de croisement. Le conducteur agit sur le commodo gauche, J527 lit l'&eacute;tat
+et l'envoie sur le K-CAN, J519 re&ccedil;oit la commande et active les relais correspondants.
+J285 affiche le t&eacute;moin de feux allum&eacute;s.</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Commodo gauche]
+       |
+       v
+[J527]  --(K-CAN : etat_feux)--> [J519]
+                                    |
+               +--------------------+--------------------+
+               |                                         |
+               v                                         v
+   [Relais feux de position]               [Relais feux de croisement]
+               |                                         |
+               v                                         v
+   [Feux av/ar position]                  [Phares de croisement]
+
+[J519] --(K-CAN : confirmation)--> [J285] --> Temoin feux
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Conducteur tourne le commodo &rarr; J527 envoie un message CAN avec l'&eacute;tat des feux demand&eacute;.</li>
+  <li>J519 re&ccedil;oit le message &rarr; active le relais feux de position ou croisement.</li>
+  <li>J519 envoie en retour sur le bus l'&eacute;tat r&eacute;el des sorties &rarr; J285 allume le t&eacute;moin.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (ampoule grill&eacute;e)&nbsp;:</strong></p>
+<ul>
+  <li>J519 d&eacute;tecte l'absence de courant sur le circuit concern&eacute;.</li>
+  <li>J519 &eacute;met un code d&eacute;faut (DTC) sur le bus CAN.</li>
+  <li>J285 affiche un t&eacute;moin de d&eacute;faut &eacute;clairage.</li>
+  <li><em>Correction&nbsp;:</em> remplacer l'ampoule, effacer le DTC via VCDS.</li>
+</ul>
+
+<h3>Lighting System II &mdash; Feux de route et antibrouillard</h3>
+
+<p><strong>Fonction&nbsp;:</strong> gestion des feux de route (pleins phares, appels de phares) et des
+feux antibrouillard. Une logique de s&eacute;curit&eacute; dans J519 interdit l'activation de
+l'antibrouillard arri&egrave;re si les feux de croisement ne sont pas allum&eacute;s (norme R19).</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Commodo gauche]
+(tirer = appel phares / pousser = pleins phares)
+       |
+       v
+[J527]  --(K-CAN : appel_phares / route)--> [J519]
+                                               |
+                          +--------------------+--------------------+
+                          |                                         |
+               Verification : croisement actifs ?        [Relais feux de route]
+               Oui --> autoriser ABR arriere                        |
+               Non --> refus (norme R19)                            v
+                          |                               [Phares de route]
+                          v
+               [Relais antibrouillard Av/Ar]
+                          |
+                          v
+               [Feux antibrouillard]
+
+[J519] --(K-CAN : confirmation)--> [J285] --> Temoin bleu (route) / orange (ABR)
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Conducteur actionne le commodo &rarr; J527 envoie la commande sur K-CAN.</li>
+  <li>J519 v&eacute;rifie les conditions (croisement actifs&nbsp;?) et active les relais feux de route / antibrouillard.</li>
+  <li>J285 affiche le t&eacute;moin bleu (route) ou orange (antibrouillard).</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (court-circuit sur sortie antibrouillard)&nbsp;:</strong></p>
+<ul>
+  <li>J519 d&eacute;tecte un surcourant et coupe la sortie pour prot&eacute;ger le circuit (fail-safe).</li>
+  <li>J519 &eacute;met un DTC&nbsp;: court-circuit antibrouillard arri&egrave;re.</li>
+  <li><em>Correction&nbsp;:</em> identifier et r&eacute;parer le court-circuit, effacer le DTC. J519 r&eacute;arme la sortie au prochain d&eacute;marrage.</li>
+</ul>
+
+<h3>Moteur essuie-glace</h3>
+
+<p><strong>Fonction&nbsp;:</strong> le moteur d'essuie-glace est command&eacute; par le commodo droit via J527
+et K-CAN. J519 pilote les relais. Le capteur optique de pluie communique avec J527 via un
+bus LIN (mode automatique).</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Capteur pluie (LIN)] --+
+                        |
+[Commodo droit]  -------+--> [J527]  --(K-CAN : vitesse_EG = OFF/INT/V1/V2/LAVAGE)--> [J519]
+                                                                                           |
+                                                                    +----------------------+
+                                                                    |          |           |
+                                                                    v          v           v
+                                                            [Relais V1]  [Relais V2]  [Relais pompe]
+                                                                    |          |           |
+                                                                    v          v           v
+                                                          [Moteur V1]  [Moteur V2]  [Pompe lave-glace]
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Conducteur agit sur le commodo droit &rarr; J527 envoie sur K-CAN la vitesse souhait&eacute;e (OFF, INT, V1, V2, lave-glace).</li>
+  <li>J519 active le relais de vitesse correspondant.</li>
+  <li>En mode auto, le capteur de pluie (LIN) ajuste l'intermittence automatiquement.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (capteur pluie absent &mdash; rupture LIN)&nbsp;:</strong></p>
+<ul>
+  <li>J527 ne re&ccedil;oit plus de r&eacute;ponse du capteur sur le bus LIN.</li>
+  <li>J527 d&eacute;sactive le mode automatique et repasse en mode manuel uniquement.</li>
+  <li>Un DTC est &eacute;mis sur le K-CAN&nbsp;: capteur pluie non communicant.</li>
+  <li><em>Correction&nbsp;:</em> v&eacute;rifier le connecteur et le c&acirc;blage LIN du capteur, effacer le DTC.</li>
+</ul>
+
+<h3>Interrupteur marche arri&egrave;re</h3>
+
+<p><strong>Fonction&nbsp;:</strong> l'interrupteur de marche arri&egrave;re signale l'engagement de la marche arri&egrave;re
+&agrave; J519, qui active alors les feux de recul. Sur le banc, cet interrupteur est simul&eacute; par un switch.</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Interrupteur marche arriere]
+(ferme = MA engagee, 12V)
+             |
+             v
+      [J519]  --(K-CAN : marche_arriere = 1)--> [J285] --> Affichage "R"
+         |
+         v
+[Relais feux de recul]
+         |
+         v
+[Feux de recul arriere (blancs)]
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Interrupteur ferm&eacute; (marche arri&egrave;re engag&eacute;e) &rarr; signal 12&nbsp;V envoy&eacute; directement &agrave; J519.</li>
+  <li>J519 active le relais feux de recul et diffuse l'information sur le K-CAN.</li>
+  <li>J285 peut afficher &laquo;&nbsp;R&nbsp;&raquo; selon les &eacute;quipements.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut&nbsp;:</strong></p>
+<ul>
+  <li>Contact ouvert permanent&nbsp;: feux de recul jamais activ&eacute;s, pas de DTC automatique, constat visuel uniquement.</li>
+  <li>Contact ferm&eacute; permanent&nbsp;: feux de recul toujours allum&eacute;s, J519 peut &eacute;mettre un DTC &laquo;&nbsp;signal implausible&nbsp;&raquo;.</li>
+  <li><em>Correction&nbsp;:</em> sur le banc, agir sur le simulateur de d&eacute;faut. En cas r&eacute;el, remplacer l'interrupteur sur la bo&icirc;te de vitesses.</li>
+</ul>
+
+<h3>Contact / Neiman</h3>
+
+<p><strong>Fonction&nbsp;:</strong> le barillet de contact g&egrave;re l'alimentation des circuits &eacute;lectriques par
+les bornes 30, 15 et 15c. J519 d&eacute;tecte l'&eacute;tat de la borne 15 et diffuse un message de
+r&eacute;veil ou de mise en veille &agrave; tous les n&oelig;uds du bus K-CAN.</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Barillet de contact]
+Cle position Marche --> Borne 15 = 12V
+             |
+             v
+      [J519]  --(K-CAN : wake-up / etat_contact = ON)-->
+             |
+     +-------+-------+-------+
+     |       |       |       |
+     v       v       v       v
+  [J527]  [J285]  [J393]  [J471]
+ s'init.  allume  s'init.  s'init.
+          tdb
+
+Cle retiree --> Borne 15 = 0V
+[J519] --(K-CAN : etat_contact = OFF)--> tous les noeuds --> mode sleep
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Cl&eacute; en position Marche &rarr; borne 15 passe &agrave; 12&nbsp;V &rarr; J519 d&eacute;tecte le contact.</li>
+  <li>J519 &eacute;met un message de r&eacute;veil sur le K-CAN&nbsp;: tous les n&oelig;uds (J527, J285, J393, J471) s'initialisent.</li>
+  <li>Cl&eacute; retir&eacute;e &rarr; J519 envoie un message de mise en veille, tous les n&oelig;uds s'&eacute;teignent progressivement, le bus passe en mode sleep.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (perte de la borne 15)&nbsp;:</strong></p>
+<ul>
+  <li>J519 ne d&eacute;tecte pas la borne 15 &rarr; aucun message de r&eacute;veil envoy&eacute; sur le bus.</li>
+  <li>Aucun n&oelig;ud ne s'initialise &rarr; pas d'&eacute;clairage, pas de tableau de bord.</li>
+  <li>J519 &eacute;met un DTC&nbsp;: tension borne 15 absente ou hors plage.</li>
+  <li><em>Correction&nbsp;:</em> v&eacute;rifier le fusible borne 15, les connecteurs et les relais. R&eacute;tablir l'alimentation.</li>
+</ul>
+
+<h3>Feux de d&eacute;tresse</h3>
+
+<p><strong>Fonction&nbsp;:</strong> les feux de d&eacute;tresse activent simultan&eacute;ment les quatre clignotants
+(AV gauche, AV droit, AR gauche, AR droit) &agrave; une fr&eacute;quence de 1,5&nbsp;Hz. Cette fonction
+reste active m&ecirc;me si la cl&eacute; est retir&eacute;e car elle est aliment&eacute;e par la borne 30 (permanente).</p>
+
+<p><strong>Sch&eacute;ma d'interaction&nbsp;:</strong></p>
+<pre>
+[Bouton detresse (rouge)]
+             |
+             v
+[J527]  --(K-CAN : detresse = 1)--> [J519]
+                                       |
+                          Generateur interne 1,5 Hz
+                                       |
+          +------------+---------------+---------------+------------+
+          |            |               |               |            |
+          v            v               v               v
+[Relais Clign.  [Relais Clign.  [Relais Clign.  [Relais Clign.
+   AV gauche]     AV droit]       AR gauche]      AR droit]
+          |            |               |               |
+          v            v               v               v
+[Clign. AV G]  [Clign. AV D]  [Clign. AR G]  [Clign. AR D]
+
+[J519] --(K-CAN : etat_detresse = 1)--> [J285] --> Temoin double fleche
+Alimentation : borne 30 (active meme cle retiree)
+</pre>
+
+<p><strong>Mode normal&nbsp;:</strong></p>
+<ul>
+  <li>Conducteur appuie sur le bouton d&eacute;tresse (rouge) &rarr; J527 envoie un message CAN&nbsp;: d&eacute;tresse&nbsp;=&nbsp;1.</li>
+  <li>J519 g&eacute;n&egrave;re le signal 1,5&nbsp;Hz et active les quatre relais clignotants simultan&eacute;ment.</li>
+  <li>J285 affiche le t&eacute;moin double fl&egrave;che clignotant.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (rupture bus CAN &mdash; J527 muet)&nbsp;:</strong></p>
+<ul>
+  <li>J527 ne peut plus envoyer la commande d&eacute;tresse sur le bus.</li>
+  <li>J519 ne re&ccedil;oit rien &rarr; les feux de d&eacute;tresse ne s'activent pas.</li>
+  <li>Tous les n&oelig;uds &eacute;mettent un DTC&nbsp;: J527 non communicant.</li>
+  <li>J285 affiche un t&eacute;moin de d&eacute;faut bus CAN.</li>
+  <li><em>Correction&nbsp;:</em> v&eacute;rifier la continuit&eacute; des fils CAN-H et CAN-L entre J527 et J519 au multim&egrave;tre. R&eacute;parer le c&acirc;ble. Le bus se resynchronise automatiquement d&egrave;s que la continuit&eacute; est r&eacute;tablie.</li>
+</ul>
+
+<p><strong>Mode d&eacute;faut (ampoule grill&eacute;e)&nbsp;:</strong></p>
+<ul>
+  <li>J519 d&eacute;tecte un circuit clignotant en circuit ouvert et &eacute;met un DTC correspondant.</li>
+  <li><em>Correction&nbsp;:</em> remplacer l'ampoule, effacer le DTC via VCDS.</li>
+</ul>
+
+<hr>
+<p><em>doc_bus_can &mdash; Sections 3, 4 et 5 &mdash; 2025-2026</em></p>
+
+</body>
+</html>
